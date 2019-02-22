@@ -3,7 +3,9 @@ package net.md_5.bungee.entitymap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.netty.buffer.ByteBuf;
 import net.md_5.bungee.BungeeCord;
+import net.md_5.bungee.BungeeServerInfo;
 import net.md_5.bungee.UserConnection;
+import net.md_5.bungee.api.IPForwardingMode;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.ProtocolConstants;
@@ -156,15 +158,15 @@ class EntityMap_1_9 extends EntityMap
     }
 
     @Override
-    public void rewriteServerbound(ByteBuf packet, int oldId, int newId)
+public void rewriteServerbound(ByteBuf packet, int oldId, int newId, BungeeServerInfo serverInfo)
     {
-        super.rewriteServerbound( packet, oldId, newId );
+        super.rewriteServerbound( packet, oldId, newId, serverInfo );
         // Special cases
         int readerIndex = packet.readerIndex();
         int packetId = DefinedPacket.readVarInt( packet );
         int packetIdLength = packet.readerIndex() - readerIndex;
 
-        if ( packetId == 0x1B /* Spectate : PacketPlayInSpectate */ && !BungeeCord.getInstance().getConfig().isIpForward() )
+        if ( packetId == 0x1B /* Spectate : PacketPlayInSpectate */ && serverInfo.getIpForwardingMode() == IPForwardingMode.NONE )
         {
             UUID uuid = DefinedPacket.readUUID( packet );
             ProxiedPlayer player;

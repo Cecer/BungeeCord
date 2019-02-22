@@ -8,6 +8,7 @@ import io.netty.buffer.ByteBufInputStream;
 import java.io.IOException;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import net.md_5.bungee.BungeeServerInfo;
 import net.md_5.bungee.protocol.DefinedPacket;
 import net.md_5.bungee.protocol.ProtocolConstants;
 
@@ -84,9 +85,14 @@ public abstract class EntityMap
         rewrite( packet, oldId, newId, serverboundInts, serverboundVarInts );
     }
 
-    public void rewriteServerbound(ByteBuf packet, int oldId, int newId, int protocolVersion)
+    public void rewriteServerbound(ByteBuf packet, int oldId, int newId, BungeeServerInfo serverInfo )
     {
-        rewriteServerbound( packet, oldId, newId );
+        rewrite(packet, oldId, newId, serverboundInts, serverboundVarInts);
+    }
+
+    public void rewriteServerbound(ByteBuf packet, int oldId, int newId, int protocolVersion, BungeeServerInfo serverInfo)
+    {
+        rewriteServerbound( packet, oldId, newId, serverInfo );
     }
 
     public void rewriteClientbound(ByteBuf packet, int oldId, int newId)

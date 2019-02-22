@@ -19,6 +19,7 @@ import lombok.Synchronized;
 import lombok.ToString;
 import net.md_5.bungee.api.Callback;
 import net.md_5.bungee.api.CommandSender;
+import net.md_5.bungee.api.IPForwardingMode;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.ServerPing;
 import net.md_5.bungee.api.config.ServerInfo;
@@ -33,7 +34,7 @@ import net.md_5.bungee.protocol.packet.PluginMessage;
 @RequiredArgsConstructor
 @ToString(of =
 {
-    "name", "address", "restricted"
+    "name", "address", "restricted", "ipForwardingMode"
 })
 public class BungeeServerInfo implements ServerInfo
 {
@@ -47,6 +48,8 @@ public class BungeeServerInfo implements ServerInfo
     private final String motd;
     @Getter
     private final boolean restricted;
+    @Getter
+    private final IPForwardingMode ipForwardingMode;
     @Getter
     private final Queue<DefinedPacket> packetQueue = new LinkedList<>();
 

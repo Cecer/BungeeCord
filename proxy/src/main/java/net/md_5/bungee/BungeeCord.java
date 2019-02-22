@@ -49,6 +49,7 @@ import lombok.Setter;
 import lombok.Synchronized;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.Favicon;
+import net.md_5.bungee.api.IPForwardingMode;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.ReconnectHandler;
 import net.md_5.bungee.api.ServerPing;
@@ -646,9 +647,9 @@ public class BungeeCord extends ProxyServer
     }
 
     @Override
-    public ServerInfo constructServerInfo(String name, InetSocketAddress address, String motd, boolean restricted)
+    public ServerInfo constructServerInfo(String name, InetSocketAddress address, String motd, boolean restricted, IPForwardingMode ipForwardingMode)
     {
-        return new BungeeServerInfo( name, address, motd, restricted );
+        return new BungeeServerInfo( name, address, motd, restricted, ipForwardingMode );
     }
 
     @Override

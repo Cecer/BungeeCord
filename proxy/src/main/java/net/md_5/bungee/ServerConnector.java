@@ -97,7 +97,18 @@ public class ServerConnector extends PacketHandler
         Handshake originalHandshake = user.getPendingConnection().getHandshake();
         Handshake copiedHandshake = new Handshake( originalHandshake.getProtocolVersion(), originalHandshake.getHost(), originalHandshake.getPort(), 2 );
 
-        if ( BungeeCord.getInstance().config.isIpForward() )
+        boolean ipForwardingEnabled = BungeeCord.getInstance().config.isIpForward();
+        switch (this.target.getIpForwardingMode()) {
+            case BUNGEECORD: {
+                ipForwardingEnabled = true;
+                break;
+            }
+            case NONE: {
+                ipForwardingEnabled = false;
+            }
+        }
+
+        if ( ipForwardingEnabled )
         {
             String newHost = copiedHandshake.getHost() + "\00" + user.getAddress().getHostString() + "\00" + user.getUUID();
 

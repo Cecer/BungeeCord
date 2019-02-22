@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import lombok.RequiredArgsConstructor;
 import net.md_5.bungee.Util;
 import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.IPForwardingMode;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ConfigurationAdapter;
 import net.md_5.bungee.api.config.ListenerInfo;
@@ -215,8 +216,9 @@ public class YamlConfig implements ConfigurationAdapter
             String addr = get( "address", "localhost:25565", val );
             String motd = ChatColor.translateAlternateColorCodes( '&', get( "motd", "&1Just another BungeeCord - Forced Host", val ) );
             boolean restricted = get( "restricted", false, val );
+            IPForwardingMode ipForwardingMode = IPForwardingMode.valueOf( get( "ip-forwarding-mode", "inherit", val ).toUpperCase() );
             InetSocketAddress address = Util.getAddr( addr );
-            ServerInfo info = ProxyServer.getInstance().constructServerInfo( name, address, motd, restricted );
+            ServerInfo info = ProxyServer.getInstance().constructServerInfo( name, address, motd, restricted, ipForwardingMode );
             ret.put( name, info );
         }
 
