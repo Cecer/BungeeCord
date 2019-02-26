@@ -1,6 +1,7 @@
 package net.md_5.bungee.conf;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap; // Waterfall
 import gnu.trove.map.TMap;
 import java.io.File;
 import java.io.IOException;
@@ -11,12 +12,16 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import lombok.Getter;
+import lombok.Synchronized; // Waterfall
+
+import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.Favicon;
 import net.md_5.bungee.api.ProxyConfig;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.config.ConfigurationAdapter;
 import net.md_5.bungee.api.config.ListenerInfo;
 import net.md_5.bungee.api.config.ServerInfo;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.util.CaseInsensitiveMap;
 import net.md_5.bungee.util.CaseInsensitiveSet;
 
@@ -39,6 +44,7 @@ public class Configuration implements ProxyConfig
      * Set of all listeners.
      */
     private Collection<ListenerInfo> listeners;
+    private final Object serversLock = new Object(); // Waterfall
     /**
      * Set of all servers.
      */
@@ -65,6 +71,7 @@ public class Configuration implements ProxyConfig
     private boolean forgeSupport;
     private boolean injectCommands;
 
+    @Synchronized("serversLock") // Waterfall
     public void load()
     {
         ConfigurationAdapter adapter = ProxyServer.getInstance().getConfigurationAdapter();
@@ -115,18 +122,31 @@ public class Configuration implements ProxyConfig
             servers = new CaseInsensitiveMap<>( newServers );
         } else
         {
-            for ( ServerInfo oldServer : servers.values() )
-            {
-                // Don't allow servers to be removed
-                Preconditions.checkArgument( newServers.containsKey( oldServer.getName() ), "Server %s removed on reload!", oldServer.getName() );
-            }
+            Map<String, ServerInfo> oldServers = getServersCopy();
+            this.servers = new CaseInsensitiveMap<>(newServers);
 
-            // Add new servers
-            for ( Map.Entry<String, ServerInfo> newServer : newServers.entrySet() )
+            for ( ServerInfo oldServer : oldServers.values() )
             {
-                if ( !servers.containsValue( newServer.getValue() ) )
-                {
-                    servers.put( newServer.getKey(), newServer.getValue() );
+                ServerInfo newServer = newServers.get(oldServer.getName());
+                if ((newServer == null || !oldServer.getAddress().equals(newServer.getAddress())) && !oldServer.getPlayers().isEmpty()) {
+                    BungeeCord.getInstance().getLogger().info("Moving players off of server: " + oldServer.getName());
+                    // The server is being removed, or having it's address changed
+                    for (ProxiedPlayer player : oldServer.getPlayers()) {
+                        ListenerInfo listener = player.getPendingConnection().getListener();
+                        String destinationName = newServers.get(listener.getDefaultServer()) == null ? listener.getDefaultServer() : listener.getFallbackServer();
+                        ServerInfo destination = newServers.get(destinationName);
+                        if (destination == null) {
+                            BungeeCord.getInstance().getLogger().severe("Couldn't find server " + listener.getDefaultServer() + " or " + listener.getFallbackServer() + " to put player " + player.getName() + " on");
+                            player.disconnect(BungeeCord.getInstance().getTranslation("fallback_kick", "Not found on reload"));
+                            continue;
+                        }
+                        player.connect(destination, (success, cause) -> {
+                            if (!success) {
+                                BungeeCord.getInstance().getLogger().log(Level.WARNING, "Failed to connect " + player.getName() + " to " + destination.getName(), cause);
+                                player.disconnect(BungeeCord.getInstance().getTranslation("fallback_kick", cause.getCause().getClass().getName()));
+                            }
+                        });
+                    }
                 }
             }
         }
@@ -171,4 +191,71 @@ public class Configuration implements ProxyConfig
 	public boolean getAlwaysHandlePackets() {
         return alwaysHandlePackets;
 	}
+
+    // Waterfall start
+    @Override
+    @Synchronized("serversLock")
+    public Map<String, ServerInfo> getServersCopy() {
+        return ImmutableMap.copyOf( servers );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public ServerInfo getServerInfo(String name)
+    {
+        return this.servers.get( name );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public ServerInfo addServer(ServerInfo server)
+    {
+        return this.servers.put( server.getName(), server );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public boolean addServers(Collection<ServerInfo> servers)
+    {
+        boolean changed = false;
+        for ( ServerInfo server : servers )
+        {
+            if ( server != this.servers.put( server.getName(), server ) ) changed = true;
+        }
+        return changed;
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public ServerInfo removeServerNamed(String name)
+    {
+        return this.servers.remove( name );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public ServerInfo removeServer(ServerInfo server)
+    {
+        return this.servers.remove( server.getName() );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public boolean removeServersNamed(Collection<String> names)
+    {
+        return this.servers.keySet().removeAll( names );
+    }
+
+    @Override
+    @Synchronized("serversLock")
+    public boolean removeServers(Collection<ServerInfo> servers)
+    {
+        boolean changed = false;
+        for ( ServerInfo server : servers )
+        {
+            if ( null != this.servers.remove( server.getName() ) ) changed = true;
+        }
+        return changed;
+    }
+    // Waterfall end
 }
